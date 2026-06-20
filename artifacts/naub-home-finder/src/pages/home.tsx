@@ -6,30 +6,70 @@ import NavBar from "@/components/NavBar";
 import PropertyCard from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Shield, CreditCard, CheckCircle, Star, MapPin, ArrowRight } from "lucide-react";
+import {
+  Search, Shield, Star, MapPin, ArrowRight,
+  Lock, CheckCircle, Home as HomeIcon, Building2, Bed, Wifi,
+  BadgeCheck, Navigation, ChevronRight
+} from "lucide-react";
 
 const STATS = [
   { value: "1,200+", label: "Student Residents" },
   { value: "320+", label: "Verified Landlords" },
-  { value: "₦0", label: "Fraud Losses" },
+  { value: "500+", label: "Active Listings" },
   { value: "4.8/5", label: "Average Rating" },
 ];
 
-const STEPS = [
+const CATEGORIES = [
+  { label: "Self-Contained", icon: HomeIcon, href: "/properties?type=self_contained" },
+  { label: "Single Room", icon: Bed, href: "/properties?rooms=1" },
+  { label: "2 Bedroom", icon: Building2, href: "/properties?rooms=2" },
+  { label: "Furnished", icon: Wifi, href: "/properties?furnished=true" },
+];
+
+const CORE_FEATURES = [
   {
-    icon: Search,
-    title: "Browse Verified Listings",
-    desc: "Search properties near NAUB campus. Every listing is reviewed by our Escrow Officer before going live.",
+    icon: Lock,
+    color: "#FF5A5F",
+    bg: "#FFF0F0",
+    title: "Escrow Payment Protection",
+    desc: "Your rent is held securely until you physically confirm you've moved in. No landlord receives a kobo before you're settled.",
   },
   {
-    icon: CreditCard,
-    title: "Pay Safely into Escrow",
-    desc: "Your rent is held in a secure escrow account — never released until you confirm you've moved in.",
+    icon: BadgeCheck,
+    color: "#10B981",
+    bg: "#ECFDF5",
+    title: "Trust Score System",
+    desc: "Every landlord and student earns a verified trust score based on identity checks, completed transactions, and peer ratings.",
   },
   {
-    icon: CheckCircle,
-    title: "Verify Occupancy & Move In",
-    desc: "Enter your 6-character occupancy code and share your GPS location to unlock escrow release.",
+    icon: Navigation,
+    color: "#3B82F6",
+    bg: "#EFF6FF",
+    title: "GPS Occupancy Verification",
+    desc: "Share your location and enter your unique 6-character code on move-in day to confirm occupancy and release funds.",
+  },
+];
+
+const HOW_IT_WORKS = [
+  {
+    num: "01",
+    title: "Create Your Account",
+    desc: "Register as a student, landlord, or agent. Upload your ID to get verified and build your trust score.",
+  },
+  {
+    num: "02",
+    title: "Browse & Shortlist",
+    desc: "Filter by price, rooms, location, and trust rating. Every listing is reviewed before going live.",
+  },
+  {
+    num: "03",
+    title: "Book & Pay Safely",
+    desc: "Send a booking request. Rent goes into escrow — secure until you're in your new home.",
+  },
+  {
+    num: "04",
+    title: "Move In & Confirm",
+    desc: "Use your occupancy code and GPS to confirm move-in. Funds release to the landlord automatically.",
   },
 ];
 
@@ -58,65 +98,65 @@ export default function Home() {
     <div className="min-h-screen bg-[#F7F7F7]">
       <NavBar />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-white">
-        <div className="relative max-w-7xl mx-auto px-4 py-20 md:py-32 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6"
-               style={{ background: "rgba(255,90,95,0.1)" }}>
-            <Shield className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Escrow-Protected Housing Marketplace</span>
-          </div>
+      {/* ── Hero ── */}
+      <section className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 py-20 md:py-28">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-4">
+              Student Housing Near NAUB Campus
+            </p>
+            <h1 className="text-4xl md:text-6xl font-extrabold text-foreground leading-tight tracking-tight mb-5">
+              Find Your Perfect<br />
+              <span style={{ color: "#FF5A5F" }}>Student Home</span>
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-xl mb-10">
+              Browse hundreds of verified, affordable listings near Nigerian Army University Biu. 
+              Safe, transparent, and built for students.
+            </p>
 
-          <h1 className="text-4xl md:text-6xl font-extrabold text-foreground mb-4 leading-tight tracking-tight">
-            Find Safe Housing Near<br />
-            <span style={{ color: "#FF5A5F" }}>NAUB Campus</span>
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
-            The only student housing platform where your money is held in escrow until you physically confirm you've moved into your new home.
-          </p>
-
-          {/* Search bar */}
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
-            <div className="flex items-center bg-white border-2 border-[#EBEBEB] rounded-full shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="flex items-center gap-3 flex-1 px-5 py-3">
-                <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
-                <Input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search by address or neighbourhood..."
-                  className="border-0 shadow-none p-0 h-auto text-base focus-visible:ring-0 bg-transparent"
-                />
+            {/* Search bar */}
+            <form onSubmit={handleSearch} className="max-w-2xl">
+              <div className="flex items-center bg-white border-2 border-[#EBEBEB] rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                <div className="flex items-center gap-3 flex-1 px-5 py-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <Input
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search by area, street, or neighbourhood..."
+                    className="border-0 shadow-none p-0 h-auto text-base focus-visible:ring-0 bg-transparent"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="m-2 rounded-xl px-6 py-3 h-auto font-semibold"
+                  style={{ background: "#FF5A5F", color: "#fff", border: "none" }}
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
               </div>
-              <Button
-                type="submit"
-                className="m-2 rounded-full px-6 py-3 h-auto font-semibold"
-                style={{ background: "#FF5A5F", color: "#fff", border: "none" }}
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Search
-              </Button>
-            </div>
-          </form>
+            </form>
 
-          {/* Quick filters */}
-          <div className="flex flex-wrap justify-center gap-2 mt-4">
-            {[
-              { label: "1 Room", href: "/properties?rooms=1" },
-              { label: "2 Rooms", href: "/properties?rooms=2" },
-              { label: "Under ₦50k/mo", href: "/properties?rent_max=50000" },
-              { label: "Most Trusted", href: "/properties?sort=most_trusted" },
-            ].map(f => (
-              <Link key={f.label} href={f.href}>
-                <button className="text-sm bg-white border border-[#EBEBEB] rounded-full px-4 py-1.5 hover:border-primary hover:text-primary transition-colors font-medium cursor-pointer">
-                  {f.label}
-                </button>
-              </Link>
-            ))}
+            {/* Quick filters */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {[
+                { label: "Under ₦30k/mo", href: "/properties?rent_max=30000" },
+                { label: "Under ₦50k/mo", href: "/properties?rent_max=50000" },
+                { label: "Self-Contained", href: "/properties?type=self_contained" },
+                { label: "Top Rated", href: "/properties?sort=most_trusted" },
+              ].map(f => (
+                <Link key={f.label} href={f.href}>
+                  <button className="text-sm bg-white border border-[#EBEBEB] rounded-full px-4 py-1.5 hover:border-primary hover:text-primary transition-colors font-medium cursor-pointer">
+                    {f.label}
+                  </button>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stats bar */}
+      {/* ── Stats bar ── */}
       <section className="py-8" style={{ background: "#FF5A5F" }}>
         <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center text-white">
           {STATS.map(s => (
@@ -128,45 +168,37 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-20 bg-white">
+      {/* ── Browse by Category ── */}
+      <section className="py-14 bg-white">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-foreground mb-3">How NAUB Homes Works</h2>
-            <p className="text-muted-foreground max-w-lg mx-auto">
-              Transparent, secure, and built specifically for NAUB students.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {STEPS.map((step, i) => (
-              <div key={step.title} className="text-center">
-                <div className="relative mx-auto mb-6 w-16 h-16">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "#FFF0F0" }}>
-                    <step.icon className="h-7 w-7 text-primary" />
+          <h2 className="text-2xl font-bold text-foreground mb-8">Browse by Type</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {CATEGORIES.map(cat => (
+              <Link key={cat.label} href={cat.href}>
+                <div className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-[#EBEBEB] bg-[#FAFAFA] hover:border-primary hover:shadow-md transition-all cursor-pointer group">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"
+                       style={{ background: "#FFF0F0" }}>
+                    <cat.icon className="h-6 w-6 text-primary" />
                   </div>
-                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
-                    {i + 1}
-                  </div>
+                  <span className="text-sm font-semibold text-foreground">{cat.label}</span>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                <p className="text-sm text-muted-foreground">{step.desc}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Featured listings */}
-      <section className="py-20 bg-[#F7F7F7]">
+      {/* ── Featured Listings ── */}
+      <section className="py-16 bg-[#F7F7F7]">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-end justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-foreground mb-1">Live Listings Near Campus</h2>
-              <p className="text-muted-foreground">All verified and ready to book</p>
+              <h2 className="text-2xl font-bold text-foreground mb-1">Latest Listings</h2>
+              <p className="text-muted-foreground text-sm">Newly added, verified properties near campus</p>
             </div>
             <Link href="/properties">
-              <Button variant="outline" className="hidden md:flex gap-2 rounded-full font-medium">
-                View all <ArrowRight className="h-4 w-4" />
+              <Button variant="outline" className="hidden md:flex gap-2 rounded-full font-medium text-sm">
+                View all listings <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -180,95 +212,147 @@ export default function Home() {
           ) : (
             <div className="text-center py-20 bg-white rounded-2xl border border-[#EBEBEB]">
               <div className="text-5xl mb-4">🏠</div>
-              <h3 className="text-lg font-semibold mb-2">No live listings yet</h3>
-              <p className="text-muted-foreground mb-6">Landlords are currently listing their properties. Check back soon!</p>
+              <h3 className="text-lg font-semibold mb-2">Listings coming soon</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                Landlords are setting up their profiles. Check back soon or be the first to list.
+              </p>
               {user && ["landlord", "agent"].includes(user.role ?? "") && (
                 <Link href="/properties/new">
-                  <Button style={{ background: "#FF5A5F", color: "#fff", border: "none" }}>List Your Property</Button>
+                  <Button style={{ background: "#FF5A5F", color: "#fff", border: "none" }}>
+                    List Your Property
+                  </Button>
                 </Link>
               )}
             </div>
           )}
-        </div>
-      </section>
 
-      {/* Trust section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold mb-4">Your Money is Always Protected</h2>
-              <p className="text-muted-foreground mb-6">
-                Unlike other platforms, NAUB Homes holds your rent in a secure escrow account.
-                Funds are never released to the landlord until you physically move in and confirm occupancy
-                using your unique 6-character code.
-              </p>
-              <div className="space-y-3">
-                {[
-                  "GPS-verified occupancy confirmation",
-                  "6-character code system prevents fraud",
-                  "Dispute resolution by certified Escrow Officers",
-                  "Full refund if property doesn't match listing",
-                ].map(item => (
-                  <div key={item} className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
-                    <span className="text-sm font-medium">{item}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8">
-                <Link href="/register">
-                  <Button style={{ background: "#FF5A5F", color: "#fff", border: "none" }} className="rounded-full px-8">
-                    Get Started Free
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            <div className="bg-[#F7F7F7] rounded-2xl p-8 text-center">
-              <div className="text-6xl mb-4">🔒</div>
-              <div className="text-2xl font-bold text-foreground mb-2">100% Escrow Protected</div>
-              <p className="text-sm text-muted-foreground">
-                Every payment flows through our certified escrow system.
-                No landlord receives funds without your approval.
-              </p>
-              <div className="mt-6 flex justify-center gap-2">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <Star key={i} className="h-5 w-5 fill-primary text-primary" />
-                ))}
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">4.8/5 from 200+ student reviews</p>
-            </div>
+          <div className="flex justify-center mt-8 md:hidden">
+            <Link href="/properties">
+              <Button variant="outline" className="flex gap-2 rounded-full font-medium text-sm">
+                See all listings <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* CTA for guests */}
+      {/* ── Core Features ── */}
+      <section className="py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="text-center mb-14">
+            <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">Why NAUB Home Finder</p>
+            <h2 className="text-3xl font-bold text-foreground mb-3">Built Different, For Your Safety</h2>
+            <p className="text-muted-foreground max-w-lg mx-auto">
+              We go beyond a simple listing board. Every feature is designed to protect NAUB students from fraud and bad landlords.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {CORE_FEATURES.map(f => (
+              <div key={f.title} className="rounded-2xl border border-[#EBEBEB] p-8 hover:shadow-md transition-shadow">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
+                     style={{ background: f.bg }}>
+                  <f.icon className="h-7 w-7" style={{ color: f.color }} />
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-3">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section className="py-20 bg-[#F7F7F7]">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold text-foreground mb-3">How It Works</h2>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              From search to settled — a clear, safe process for every student.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6">
+            {HOW_IT_WORKS.map((step, i) => (
+              <div key={step.num} className="relative">
+                {i < HOW_IT_WORKS.length - 1 && (
+                  <div className="hidden md:block absolute top-6 left-full w-full h-0.5 z-0"
+                       style={{ background: "#EBEBEB", width: "calc(100% - 3rem)", left: "calc(50% + 1.5rem)" }} />
+                )}
+                <div className="bg-white rounded-2xl p-6 border border-[#EBEBEB] relative z-10 text-center">
+                  <div className="text-3xl font-extrabold mb-3" style={{ color: "rgba(255,90,95,0.2)" }}>{step.num}</div>
+                  <h3 className="text-sm font-bold text-foreground mb-2">{step.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Trust Strip ── */}
+      <section className="py-10 bg-white border-t border-b border-[#EBEBEB]">
+        <div className="max-w-4xl mx-auto px-4 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
+          {[
+            { icon: Shield, text: "Verified landlords only" },
+            { icon: Lock, text: "Escrow-protected payments" },
+            { icon: Star, text: "4.8/5 student satisfaction" },
+            { icon: CheckCircle, text: "Fraud dispute resolution" },
+          ].map(item => (
+            <div key={item.text} className="flex items-center gap-2">
+              <item.icon className="h-4 w-4 text-primary" />
+              <span className="font-medium">{item.text}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
       {!user && (
-        <section className="py-16 text-center" style={{ background: "#FF5A5F" }}>
-          <div className="max-w-2xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-white mb-4">Ready to Find Your Home?</h2>
-            <p className="mb-8" style={{ color: "rgba(255,255,255,0.8)" }}>Join 1,200+ NAUB students already on the platform</p>
-            <div className="flex justify-center gap-4 flex-wrap">
-              <Link href="/register">
-                <Button size="lg" className="rounded-full bg-white text-primary font-bold hover:bg-gray-50">
-                  Register as Student
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button size="lg" variant="outline" className="rounded-full border-white text-white hover:bg-white/10">
-                  List Your Property
-                </Button>
-              </Link>
+        <section className="py-20 bg-[#F7F7F7]">
+          <div className="max-w-4xl mx-auto px-4">
+            <div className="rounded-3xl overflow-hidden grid md:grid-cols-2">
+              {/* Student side */}
+              <div className="p-10 flex flex-col justify-between" style={{ background: "#FF5A5F" }}>
+                <div>
+                  <p className="text-white/70 text-sm font-semibold uppercase tracking-widest mb-3">For Students</p>
+                  <h3 className="text-2xl font-bold text-white mb-3">Find Your Room Today</h3>
+                  <p className="text-white/80 text-sm mb-8">
+                    Browse verified listings, book safely, and move in with full protection.
+                  </p>
+                </div>
+                <Link href="/register">
+                  <Button className="rounded-full bg-white font-bold hover:bg-gray-50 w-full sm:w-auto"
+                          style={{ color: "#FF5A5F" }}>
+                    Register as Student <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+              {/* Landlord side */}
+              <div className="p-10 flex flex-col justify-between bg-[#222222]">
+                <div>
+                  <p className="text-white/50 text-sm font-semibold uppercase tracking-widest mb-3">For Landlords</p>
+                  <h3 className="text-2xl font-bold text-white mb-3">List Your Property</h3>
+                  <p className="text-white/60 text-sm mb-8">
+                    Reach thousands of verified NAUB students. Get paid securely through our escrow system.
+                  </p>
+                </div>
+                <Link href="/register">
+                  <Button variant="outline"
+                          className="rounded-full border-white/30 text-white hover:bg-white/10 w-full sm:w-auto">
+                    List a Property <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <footer className="py-10" style={{ background: "#222222" }}>
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded flex items-center justify-center font-bold text-sm text-white" style={{ background: "#FF5A5F" }}>N</div>
+            <div className="h-7 w-7 rounded flex items-center justify-center font-bold text-sm text-white"
+                 style={{ background: "#FF5A5F" }}>N</div>
             <span className="text-white font-semibold">NAUB Home Finder</span>
           </div>
           <p className="text-sm text-center" style={{ color: "rgba(255,255,255,0.5)" }}>
