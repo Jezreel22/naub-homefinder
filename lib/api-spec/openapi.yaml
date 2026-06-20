@@ -1,22 +1,37 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: NAUB Home Finder API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User management
+  - name: properties
+    description: Property listings
+  - name: bookings
+    description: Bookings and escrow
+  - name: ratings
+    description: Ratings and reviews
+  - name: disputes
+    description: Dispute resolution
+  - name: messages
+    description: In-app messaging
+  - name: admin
+    description: Admin / Escrow Officer operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +39,813 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── AUTH ─────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── USERS ─────────────────────────────────────────────────────────────────
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user public profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublicProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update own profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserInput"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublicProfile"
+
+  /users/{id}/trust-score:
+    get:
+      operationId: getUserTrustScore
+      tags: [users]
+      summary: Get trust score breakdown
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Trust score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrustScore"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get own profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublicProfile"
+
+  # ── PROPERTIES ────────────────────────────────────────────────────────────
+  /properties:
+    get:
+      operationId: getProperties
+      tags: [properties]
+      summary: Search and browse properties
+      parameters:
+        - name: rent_min
+          in: query
+          schema:
+            type: integer
+        - name: rent_max
+          in: query
+          schema:
+            type: integer
+        - name: rooms
+          in: query
+          schema:
+            type: integer
+        - name: trust_score_min
+          in: query
+          schema:
+            type: integer
+        - name: landlord_type
+          in: query
+          schema:
+            type: string
+            enum: [all, landlord, agent]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, cheapest, most_trusted]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Property list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyListResponse"
+    post:
+      operationId: createProperty
+      tags: [properties]
+      summary: Create a new property listing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePropertyInput"
+      responses:
+        "201":
+          description: Property created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /properties/{id}:
+    get:
+      operationId: getProperty
+      tags: [properties]
+      summary: Get property detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Property detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateProperty
+      tags: [properties]
+      summary: Update property listing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePropertyInput"
+      responses:
+        "200":
+          description: Updated property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyDetail"
+    delete:
+      operationId: deleteProperty
+      tags: [properties]
+      summary: Delete property listing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /properties/my:
+    get:
+      operationId: getMyProperties
+      tags: [properties]
+      summary: Get current landlord/agent's own listings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: My properties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyListResponse"
+
+  /properties/{id}/photos:
+    post:
+      operationId: addPropertyPhotos
+      tags: [properties]
+      summary: Add photos to a property
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPhotosInput"
+      responses:
+        "201":
+          description: Photos added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /properties/{id}/publish:
+    post:
+      operationId: publishProperty
+      tags: [properties]
+      summary: Submit property for review / publish it
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyDetail"
+
+  # ── BOOKINGS ──────────────────────────────────────────────────────────────
+  /bookings:
+    get:
+      operationId: getBookings
+      tags: [bookings]
+      summary: List my bookings (student sees own, landlord sees received)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Booking list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BookingDetail"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a booking and initiate escrow
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingInput"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/{id}:
+    get:
+      operationId: getBooking
+      tags: [bookings]
+      summary: Get booking details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Booking detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingDetail"
+
+  /bookings/{id}/confirm-occupancy:
+    post:
+      operationId: confirmOccupancy
+      tags: [bookings]
+      summary: Submit occupancy verification (GPS + code)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmOccupancyInput"
+      responses:
+        "200":
+          description: Occupancy confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingDetail"
+        "400":
+          description: Invalid code or location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/{id}/dispute:
+    post:
+      operationId: fileDispute
+      tags: [bookings]
+      summary: File a dispute for a booking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileDisputeInput"
+      responses:
+        "201":
+          description: Dispute filed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── RATINGS ───────────────────────────────────────────────────────────────
+  /ratings:
+    post:
+      operationId: createRating
+      tags: [ratings]
+      summary: Submit a post-occupancy rating
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRatingInput"
+      responses:
+        "201":
+          description: Rating submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RatingDetail"
+    get:
+      operationId: getRatings
+      tags: [ratings]
+      summary: Get ratings for a user
+      parameters:
+        - name: ratee_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ratings list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RatingDetail"
+
+  # ── DISPUTES ──────────────────────────────────────────────────────────────
+  /disputes:
+    get:
+      operationId: getDisputes
+      tags: [disputes]
+      summary: List disputes (admin sees all, others see own)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Disputes list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DisputeDetail"
+
+  /disputes/{id}:
+    get:
+      operationId: getDispute
+      tags: [disputes]
+      summary: Get dispute detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dispute detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisputeDetail"
+
+  /disputes/{id}/adjudicate:
+    post:
+      operationId: adjudicateDispute
+      tags: [disputes]
+      summary: Adjudicate a dispute (escrow officer only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdjudicateDisputeInput"
+      responses:
+        "200":
+          description: Adjudicated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisputeDetail"
+
+  # ── MESSAGES ──────────────────────────────────────────────────────────────
+  /messages:
+    get:
+      operationId: getConversations
+      tags: [messages]
+      summary: List all conversations for the current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConversationPreview"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageInput"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageItem"
+
+  /messages/{userId}:
+    get:
+      operationId: getConversation
+      tags: [messages]
+      summary: Get full message thread with a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Message thread
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageItem"
+
+  # ── ADMIN ─────────────────────────────────────────────────────────────────
+  /admin/verifications:
+    get:
+      operationId: getPendingVerifications
+      tags: [admin]
+      summary: List users pending verification review
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pending verifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserPublicProfile"
+
+  /admin/verifications/{id}/approve:
+    post:
+      operationId: approveVerification
+      tags: [admin]
+      summary: Approve a user's identity verification
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/verifications/{id}/reject:
+    post:
+      operationId: rejectVerification
+      tags: [admin]
+      summary: Reject a user's identity verification
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectInput"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/users/{id}/suspend:
+    post:
+      operationId: suspendUser
+      tags: [admin]
+      summary: Suspend or ban a user account
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuspendUserInput"
+      responses:
+        "200":
+          description: Suspended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/properties/{id}/approve:
+    post:
+      operationId: approveProperty
+      tags: [admin]
+      summary: Approve a pending property listing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/properties/{id}/reject:
+    post:
+      operationId: rejectProperty
+      tags: [admin]
+      summary: Reject a pending property listing
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectInput"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/pending-properties:
+    get:
+      operationId: getPendingProperties
+      tags: [admin]
+      summary: List properties pending review
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pending properties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyListResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +855,623 @@ components:
       required:
         - status
 
+    # ── Auth ────────────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required:
+        - email
+        - password
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        role:
+          type: string
+          enum: [student, landlord, agent, escrow_officer]
+        first_name:
+          type: ["string", "null"]
+        last_name:
+          type: ["string", "null"]
+        matriculation_number:
+          type: ["string", "null"]
+
+    LoginInput:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required:
+        - message
+        - user
+        - token
+      properties:
+        message:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    # ── Users ────────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - role
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        first_name:
+          type: ["string", "null"]
+        last_name:
+          type: ["string", "null"]
+        matriculation_number:
+          type: ["string", "null"]
+        verification_status:
+          type: ["string", "null"]
+        account_suspended:
+          type: ["boolean", "null"]
+        phone_number:
+          type: ["string", "null"]
+        profile_photo_url:
+          type: ["string", "null"]
+        created_at:
+          type: ["string", "null"]
+
+    UserPublicProfile:
+      type: object
+      required:
+        - id
+        - role
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        role:
+          type: string
+        first_name:
+          type: ["string", "null"]
+        last_name:
+          type: ["string", "null"]
+        profile_photo_url:
+          type: ["string", "null"]
+        verification_status:
+          type: ["string", "null"]
+        account_suspended:
+          type: ["boolean", "null"]
+        national_id_document_url:
+          type: ["string", "null"]
+        selfie_url:
+          type: ["string", "null"]
+        letter_of_agency_url:
+          type: ["string", "null"]
+        phone_number:
+          type: ["string", "null"]
+        matriculation_number:
+          type: ["string", "null"]
+        suspension_reason:
+          type: ["string", "null"]
+        created_at:
+          type: ["string", "null"]
+        trust_score:
+          $ref: "#/components/schemas/TrustScore"
+
+    UpdateUserInput:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone_number:
+          type: string
+        profile_photo_url:
+          type: string
+        national_id_document_url:
+          type: string
+        selfie_url:
+          type: string
+        letter_of_agency_url:
+          type: string
+
+    TrustScore:
+      type: object
+      properties:
+        user_id:
+          type: string
+        total_score:
+          type: integer
+        identity_verification_points:
+          type: integer
+        property_verification_points:
+          type: integer
+        transaction_completion_points:
+          type: integer
+        ratings_average_points:
+          type: integer
+        fraud_report_deduction:
+          type: integer
+        tenure_bonus_points:
+          type: integer
+        total_transactions:
+          type: integer
+        completed_transactions:
+          type: integer
+        average_rating:
+          type: number
+        fraud_reports_count:
+          type: integer
+        last_recomputed_at:
+          type: ["string", "null"]
+
+    # ── Properties ──────────────────────────────────────────────────────────
+    PropertyListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PropertySummary"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    PropertySummary:
+      type: object
+      properties:
+        id:
+          type: string
+        address:
+          type: string
+        rent_amount_ngn:
+          type: integer
+        deposit_amount_ngn:
+          type: integer
+        rooms:
+          type: integer
+        listing_status:
+          type: string
+        landlord:
+          $ref: "#/components/schemas/LandlordSummary"
+        trust_score:
+          type: integer
+        hero_photo_url:
+          type: ["string", "null"]
+        amenities:
+          type: object
+          additionalProperties:
+            type: boolean
+        created_at:
+          type: ["string", "null"]
+
+    LandlordSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        first_name:
+          type: ["string", "null"]
+        last_name:
+          type: ["string", "null"]
+        profile_photo_url:
+          type: ["string", "null"]
+        role:
+          type: string
+        verification_status:
+          type: ["string", "null"]
+        average_rating:
+          type: ["number", "null"]
+
+    PropertyDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        landlord_id:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        rent_amount_ngn:
+          type: integer
+        deposit_amount_ngn:
+          type: integer
+        lease_duration_days:
+          type: ["integer", "null"]
+        rooms:
+          type: integer
+        amenities:
+          type: object
+          additionalProperties:
+            type: boolean
+        house_rules:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        listing_status:
+          type: string
+        geolocation_verified_at:
+          type: ["string", "null"]
+        published_at:
+          type: ["string", "null"]
+        created_at:
+          type: ["string", "null"]
+        landlord:
+          $ref: "#/components/schemas/UserPublicProfile"
+        trust_score:
+          type: integer
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhotoItem"
+        ratings:
+          type: array
+          items:
+            $ref: "#/components/schemas/RatingDetail"
+
+    PhotoItem:
+      type: object
+      properties:
+        id:
+          type: string
+        photo_url:
+          type: string
+        photo_order:
+          type: integer
+
+    CreatePropertyInput:
+      type: object
+      required:
+        - address
+        - rent_amount_ngn
+        - deposit_amount_ngn
+        - rooms
+      properties:
+        address:
+          type: string
+        rent_amount_ngn:
+          type: integer
+        deposit_amount_ngn:
+          type: integer
+        lease_duration_days:
+          type: integer
+        rooms:
+          type: integer
+        amenities:
+          type: object
+          additionalProperties:
+            type: boolean
+        house_rules:
+          type: string
+        description:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+
+    UpdatePropertyInput:
+      type: object
+      properties:
+        address:
+          type: string
+        rent_amount_ngn:
+          type: integer
+        deposit_amount_ngn:
+          type: integer
+        lease_duration_days:
+          type: integer
+        rooms:
+          type: integer
+        amenities:
+          type: object
+          additionalProperties:
+            type: boolean
+        house_rules:
+          type: string
+        description:
+          type: string
+        listing_status:
+          type: string
+
+    AddPhotosInput:
+      type: object
+      required:
+        - photos
+      properties:
+        photos:
+          type: array
+          items:
+            type: object
+            properties:
+              photo_url:
+                type: string
+              photo_order:
+                type: integer
+
+    # ── Bookings ─────────────────────────────────────────────────────────────
+    CreateBookingInput:
+      type: object
+      required:
+        - property_id
+        - payment_method
+        - lease_start_date
+        - lease_duration_days
+      properties:
+        property_id:
+          type: string
+        payment_method:
+          type: string
+          enum: [stripe, flutterwave, bank_transfer]
+        lease_start_date:
+          type: string
+        lease_duration_days:
+          type: integer
+
+    BookingDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        student_id:
+          type: string
+        property_id:
+          type: string
+        landlord_id:
+          type: string
+        lease_start_date:
+          type: ["string", "null"]
+        lease_duration_days:
+          type: ["integer", "null"]
+        rent_amount_ngn:
+          type: integer
+        deposit_amount_ngn:
+          type: integer
+        total_amount_ngn:
+          type: integer
+        escrow_account_reference:
+          type: ["string", "null"]
+        payment_method:
+          type: ["string", "null"]
+        booking_status:
+          type: string
+        dispute_status:
+          type: ["string", "null"]
+        occupancy_verified_at:
+          type: ["string", "null"]
+        escrow_released_at:
+          type: ["string", "null"]
+        created_at:
+          type: ["string", "null"]
+        property:
+          $ref: "#/components/schemas/PropertySummary"
+        student:
+          $ref: "#/components/schemas/LandlordSummary"
+        landlord:
+          $ref: "#/components/schemas/LandlordSummary"
+
+    ConfirmOccupancyInput:
+      type: object
+      required:
+        - occupancy_code
+      properties:
+        occupancy_code:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+
+    FileDisputeInput:
+      type: object
+      required:
+        - reason
+        - description
+      properties:
+        reason:
+          type: string
+          enum: [property_mismatch, occupancy_not_verified, unresponsive, safety_concern, other]
+        description:
+          type: string
+        refund_request:
+          type: string
+          enum: [full, partial, officer_decides]
+        refund_amount:
+          type: integer
+
+    # ── Ratings ──────────────────────────────────────────────────────────────
+    CreateRatingInput:
+      type: object
+      required:
+        - booking_id
+        - ratee_id
+        - stars
+        - rating_type
+      properties:
+        booking_id:
+          type: string
+        ratee_id:
+          type: string
+        rating_type:
+          type: string
+          enum: [student_rates_landlord, landlord_rates_student]
+        stars:
+          type: integer
+          minimum: 1
+          maximum: 5
+        review_text:
+          type: string
+
+    RatingDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        booking_id:
+          type: string
+        rater_id:
+          type: string
+        ratee_id:
+          type: string
+        rating_type:
+          type: string
+        stars:
+          type: integer
+        review_text:
+          type: ["string", "null"]
+        rater:
+          $ref: "#/components/schemas/LandlordSummary"
+        created_at:
+          type: ["string", "null"]
+
+    # ── Disputes ─────────────────────────────────────────────────────────────
+    AdjudicateDisputeInput:
+      type: object
+      required:
+        - decision
+        - adjudication_notes
+      properties:
+        decision:
+          type: string
+          enum: [dismissed, partial_refund, full_refund, fraud_substantiated]
+        adjudication_notes:
+          type: string
+        refund_percentage_to_student:
+          type: integer
+
+    DisputeDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        booking_id:
+          type: string
+        student_id:
+          type: string
+        landlord_id:
+          type: string
+        reason:
+          type: string
+        description:
+          type: string
+        dispute_status:
+          type: string
+        adjudication_decision:
+          type: ["string", "null"]
+        adjudication_notes:
+          type: ["string", "null"]
+        created_at:
+          type: ["string", "null"]
+        resolved_at:
+          type: ["string", "null"]
+        student:
+          $ref: "#/components/schemas/LandlordSummary"
+        landlord:
+          $ref: "#/components/schemas/LandlordSummary"
+        booking:
+          $ref: "#/components/schemas/BookingDetail"
+
+    # ── Messages ─────────────────────────────────────────────────────────────
+    SendMessageInput:
+      type: object
+      required:
+        - recipient_id
+        - message_text
+      properties:
+        recipient_id:
+          type: string
+        message_text:
+          type: string
+        booking_id:
+          type: string
+
+    MessageItem:
+      type: object
+      properties:
+        id:
+          type: string
+        sender_id:
+          type: string
+        recipient_id:
+          type: string
+        booking_id:
+          type: ["string", "null"]
+        message_text:
+          type: string
+        message_type:
+          type: string
+        read_at:
+          type: ["string", "null"]
+        created_at:
+          type: ["string", "null"]
+        sender:
+          $ref: "#/components/schemas/LandlordSummary"
+
+    ConversationPreview:
+      type: object
+      properties:
+        other_user:
+          $ref: "#/components/schemas/LandlordSummary"
+        last_message:
+          type: string
+        last_message_at:
+          type: ["string", "null"]
+        unread_count:
+          type: integer
+
+    # ── Admin ────────────────────────────────────────────────────────────────
+    RejectInput:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+
+    SuspendUserInput:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+
+    # ── Shared ────────────────────────────────────────────────────────────────
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
