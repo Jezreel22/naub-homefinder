@@ -1,228 +1,412 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRegister } from "@workspace/api-client-react";
+import { GoogleLogin } from "@react-oauth/google";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription,
+} from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { RegisterInputRole } from "@workspace/api-client-react";
+import {
+  GraduationCap, Building2, ChevronLeft, ShieldCheck, CheckCircle2, Eye, EyeOff,
+} from "lucide-react";
 
-const registerSchema = z.object({
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  role: z.nativeEnum(RegisterInputRole),
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+
+type Role = "student" | "landlord";
+
+const studentSchema = z.object({
+  first_name: z.string().min(1, "Required"),
+  last_name: z.string().min(1, "Required"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "At least 6 characters"),
   matriculation_number: z.string().optional(),
 });
 
+const landlordSchema = z.object({
+  first_name: z.string().min(1, "Required"),
+  last_name: z.string().min(1, "Required"),
+  email: z.string().email("Invalid email"),
+  phone_number: z.string().min(10, "Enter a valid phone number"),
+  password: z.string().min(8, "At least 8 characters"),
+  confirm_password: z.string().min(1, "Required"),
+}).refine(d => d.password === d.confirm_password, {
+  message: "Passwords do not match",
+  path: ["confirm_password"],
+});
+
+function saveAuth(token: string, user: object) {
+  localStorage.setItem("naub_token", token);
+  localStorage.setItem("naub_user", JSON.stringify(user));
+  window.dispatchEvent(new Event("storage"));
+}
+
 export default function Register() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const registerMutation = useRegister();
+  const [showPw, setShowPw] = useState(false);
+  const [googlePending, setGooglePending] = useState(false);
 
-  const form = useForm<z.infer<typeof registerSchema>>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      first_name: "",
-      last_name: "",
-      email: "",
-      password: "",
-      role: RegisterInputRole.student,
-      matriculation_number: "",
-    },
+  const qRole = new URLSearchParams(search).get("role") as Role | null;
+  const [role, setRole] = useState<Role | null>(qRole && ["student", "landlord"].includes(qRole) ? qRole : null);
+
+  const studentForm = useForm<z.infer<typeof studentSchema>>({
+    resolver: zodResolver(studentSchema),
+    defaultValues: { first_name: "", last_name: "", email: "", password: "", matriculation_number: "" },
+  });
+  const landlordForm = useForm<z.infer<typeof landlordSchema>>({
+    resolver: zodResolver(landlordSchema),
+    defaultValues: { first_name: "", last_name: "", email: "", phone_number: "", password: "", confirm_password: "" },
   });
 
-  const selectedRole = form.watch("role");
+  function handleSuccess(token: string, user: any) {
+    saveAuth(token, user);
+    toast({ title: "Account created!", description: `Welcome, ${user.first_name ?? user.email}!` });
+    if (user.role === "student") setLocation("/dashboard");
+    else setLocation("/kyc");
+  }
 
-  function onSubmit(values: z.infer<typeof registerSchema>) {
-    // Clean up optional fields
-    const data = { ...values };
-    if (data.role !== RegisterInputRole.student || !data.matriculation_number) {
-      delete data.matriculation_number;
+  async function handleGoogleSuccess(credential: string) {
+    setGooglePending(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential, role: "student" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Google sign-in failed");
+      handleSuccess(data.token, data.user);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Google sign-in failed", description: err.message });
+    } finally {
+      setGooglePending(false);
     }
+  }
 
+  function onStudentSubmit(values: z.infer<typeof studentSchema>) {
     registerMutation.mutate(
-      { data },
+      { data: { ...values, role: "student" as any } },
       {
-        onSuccess: (res) => {
-          localStorage.setItem("naub_token", res.token);
-          localStorage.setItem("naub_user", JSON.stringify(res.user));
-          toast({
-            title: "Account created!",
-            description: "Welcome to NAUB Home Finder.",
-          });
-          const role = res.user?.role;
-          if (role === "landlord" || role === "agent") {
-            setLocation("/kyc");
-          } else {
-            setLocation("/dashboard");
-          }
-        },
-        onError: (err) => {
-          toast({
-            variant: "destructive",
-            title: "Registration failed",
-            description: (err as any).error || err.message || "An error occurred during registration.",
-          });
-        },
+        onSuccess: (res) => handleSuccess(res.token, res.user),
+        onError: (err) => toast({ variant: "destructive", title: "Registration failed", description: (err as any).error ?? err.message }),
+      }
+    );
+  }
+
+  function onLandlordSubmit(values: z.infer<typeof landlordSchema>) {
+    const { confirm_password, ...rest } = values;
+    registerMutation.mutate(
+      { data: { ...rest, role: "landlord" as any } },
+      {
+        onSuccess: (res) => handleSuccess(res.token, res.user),
+        onError: (err) => toast({ variant: "destructive", title: "Registration failed", description: (err as any).error ?? err.message }),
       }
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4 py-12">
-      <Card className="w-full max-w-md shadow-lg border-primary/10">
-        <CardHeader className="space-y-2 text-center pb-6">
-          <Link href="/" className="inline-flex justify-center mb-2 cursor-pointer">
-            <div className="h-10 w-10 bg-primary text-primary-foreground rounded-lg flex items-center justify-center font-bold text-xl">
-              N
+    <div className="min-h-screen flex" style={{ background: "#F7F7F7" }}>
+      {/* Left decorative panel */}
+      <div className="hidden lg:flex w-[420px] shrink-0 flex-col justify-between p-10 text-white"
+           style={{ background: "linear-gradient(155deg, #FF5A5F 0%, #c0363a 100%)" }}>
+        <Link href="/" className="flex items-center gap-2">
+          <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center font-extrabold text-lg">N</div>
+          <span className="font-bold text-lg">NAUB Home Finder</span>
+        </Link>
+        <div className="space-y-6">
+          <h2 className="text-3xl font-extrabold leading-tight">
+            {role === "landlord" ? "List your property, reach verified students" : "Find your perfect student home"}
+          </h2>
+          <p className="text-white/80 text-sm leading-relaxed">
+            {role === "landlord"
+              ? "Complete your KYC to become a verified landlord and list properties on Nigeria's safest student housing platform."
+              : "Browse hundreds of verified listings near NAUB campus with full escrow payment protection."}
+          </p>
+          {role === "landlord" && (
+            <div className="space-y-3">
+              {[
+                "Quick KYC — verified in minutes",
+                "List unlimited properties",
+                "Secure, escrow-protected payments",
+                "Dispute resolution support",
+              ].map(l => (
+                <div key={l} className="flex items-center gap-2.5 text-sm text-white/90">
+                  <CheckCircle2 className="h-4 w-4 text-white/70 shrink-0" /> {l}
+                </div>
+              ))}
             </div>
-          </Link>
-          <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
-          <CardDescription>
-            Join NAUB Home Finder for safe housing
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="first_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John" {...field} data-testid="input-firstname" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="last_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Doe" {...field} data-testid="input-lastname" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+          )}
+          {role === "student" && (
+            <div className="space-y-3">
+              {[
+                "Free to sign up with email or Google",
+                "100+ verified listings near campus",
+                "Chat directly with landlords",
+                "Escrow protects your payment",
+              ].map(l => (
+                <div key={l} className="flex items-center gap-2.5 text-sm text-white/90">
+                  <CheckCircle2 className="h-4 w-4 text-white/70 shrink-0" /> {l}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-white/40">&copy; {new Date().getFullYear()} NAUB Home Finder</p>
+      </div>
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="you@example.com" {...field} data-testid="input-email" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} data-testid="input-password" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>I am a...</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-role">
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={RegisterInputRole.student}>Student looking for housing</SelectItem>
-                        <SelectItem value={RegisterInputRole.landlord}>Landlord listing properties</SelectItem>
-                        <SelectItem value={RegisterInputRole.agent}>Agent assisting students</SelectItem>
-                        <SelectItem value={RegisterInputRole.escrow_officer}>Escrow Officer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {selectedRole === RegisterInputRole.student && (
-                <FormField
-                  control={form.control}
-                  name="matriculation_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Matriculation Number (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="NAUB/1234/..." {...field} data-testid="input-matric" />
-                      </FormControl>
-                      <FormDescription>Helps verify your student status faster.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <Button
-                type="submit"
-                className="w-full mt-2"
-                disabled={registerMutation.isPending}
-                data-testid="button-submit"
-              >
-                {registerMutation.isPending ? "Creating account..." : "Register"}
-              </Button>
-            </form>
-          </Form>
-
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">Already have an account? </span>
-            <Link href="/login" className="font-medium text-primary hover:underline" data-testid="link-to-login">
-              Log in instead
+      {/* Right: form area */}
+      <div className="flex-1 flex items-start justify-center p-6 pt-10 pb-16 overflow-y-auto">
+        <div className="w-full max-w-md">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-2 mb-8">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-xl flex items-center justify-center font-extrabold text-white text-lg"
+                   style={{ background: "#FF5A5F" }}>N</div>
+              <span className="font-bold text-lg">NAUB Home Finder</span>
             </Link>
           </div>
-        </CardContent>
-      </Card>
+
+          {!role ? (
+            /* ── Role picker ── */
+            <div>
+              <h1 className="text-2xl font-extrabold mb-1">Create an account</h1>
+              <p className="text-muted-foreground text-sm mb-8">Who are you joining as?</p>
+
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <button onClick={() => setRole("student")}
+                  className="group flex flex-col items-center gap-3 p-6 bg-white rounded-2xl border-2 border-transparent hover:border-primary transition-all hover:shadow-md">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                       style={{ background: "#FFF0F0" }}>
+                    <GraduationCap className="h-7 w-7 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-sm">Student</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Find housing near campus</p>
+                  </div>
+                </button>
+
+                <button onClick={() => setRole("landlord")}
+                  className="group flex flex-col items-center gap-3 p-6 bg-white rounded-2xl border-2 border-transparent hover:border-primary transition-all hover:shadow-md">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                       style={{ background: "#FFF0F0" }}>
+                    <Building2 className="h-7 w-7 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-sm">Landlord / Agent</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">List your properties</p>
+                  </div>
+                </button>
+              </div>
+
+              <p className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link href="/login" className="font-semibold text-primary hover:underline">Log in</Link>
+              </p>
+            </div>
+
+          ) : role === "student" ? (
+            /* ── Student registration ── */
+            <div>
+              <button onClick={() => setRole(null)}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+                <ChevronLeft className="h-4 w-4" /> Back
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#FFF0F0" }}>
+                  <GraduationCap className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-extrabold leading-tight">Student Sign Up</h1>
+                  <p className="text-xs text-muted-foreground">Free and instant — no verification required</p>
+                </div>
+              </div>
+
+              {/* Google sign-up */}
+              {GOOGLE_CLIENT_ID && (
+                <div className="mb-5">
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={(resp) => resp.credential && handleGoogleSuccess(resp.credential)}
+                      onError={() => toast({ variant: "destructive", title: "Google sign-in failed" })}
+                      size="large" width="100%" text="signup_with" shape="rectangular"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 my-5">
+                    <div className="flex-1 h-px bg-[#EBEBEB]" />
+                    <span className="text-xs text-muted-foreground">or sign up with email</span>
+                    <div className="flex-1 h-px bg-[#EBEBEB]" />
+                  </div>
+                </div>
+              )}
+
+              <Form {...studentForm}>
+                <form onSubmit={studentForm.handleSubmit(onStudentSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField control={studentForm.control} name="first_name" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl><Input placeholder="Amina" {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={studentForm.control} name="last_name" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl><Input placeholder="Usman" {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <FormField control={studentForm.control} name="email" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email address</FormLabel>
+                      <FormControl><Input placeholder="you@example.com" type="email" {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={studentForm.control} name="matriculation_number" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Matric Number <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                      <FormControl><Input placeholder="NAUB/2024/..." {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+                      <FormDescription>Helps verify your student status faster</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={studentForm.control} name="password" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input type={showPw ? "text" : "password"} placeholder="At least 6 characters"
+                                 {...field} className="h-11 rounded-xl bg-white pr-10" />
+                          <button type="button" onClick={() => setShowPw(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <Button type="submit" className="w-full h-11 rounded-xl font-semibold mt-1"
+                          style={{ background: "#FF5A5F", color: "#fff", border: "none" }}
+                          disabled={registerMutation.isPending || googlePending}>
+                    {registerMutation.isPending ? "Creating account…" : "Create Student Account"}
+                  </Button>
+                </form>
+              </Form>
+
+              <p className="text-center text-sm text-muted-foreground mt-5">
+                Already have an account?{" "}
+                <Link href="/login?role=student" className="font-semibold text-primary hover:underline">Log in</Link>
+              </p>
+            </div>
+
+          ) : (
+            /* ── Landlord registration ── */
+            <div>
+              <button onClick={() => setRole(null)}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+                <ChevronLeft className="h-4 w-4" /> Back
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#FFF0F0" }}>
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-extrabold leading-tight">Landlord Sign Up</h1>
+                  <p className="text-xs text-muted-foreground">Identity & property verification required</p>
+                </div>
+              </div>
+
+              <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2.5 text-sm text-blue-800">
+                <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
+                <span>After signing up you'll complete a quick KYC to verify your identity and property ownership — takes under 5 minutes.</span>
+              </div>
+
+              <Form {...landlordForm}>
+                <form onSubmit={landlordForm.handleSubmit(onLandlordSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField control={landlordForm.control} name="first_name" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl><Input placeholder="Musa" {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={landlordForm.control} name="last_name" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl><Input placeholder="Ibrahim" {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <FormField control={landlordForm.control} name="email" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email address</FormLabel>
+                      <FormControl><Input placeholder="you@example.com" type="email" {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={landlordForm.control} name="phone_number" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl><Input placeholder="+234 800 000 0000" type="tel" {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={landlordForm.control} name="password" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input type={showPw ? "text" : "password"} placeholder="At least 8 characters"
+                                 {...field} className="h-11 rounded-xl bg-white pr-10" />
+                          <button type="button" onClick={() => setShowPw(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={landlordForm.control} name="confirm_password" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} className="h-11 rounded-xl bg-white" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <Button type="submit" className="w-full h-11 rounded-xl font-semibold mt-1"
+                          style={{ background: "#FF5A5F", color: "#fff", border: "none" }}
+                          disabled={registerMutation.isPending}>
+                    {registerMutation.isPending ? "Creating account…" : "Continue to Identity Verification"}
+                  </Button>
+                </form>
+              </Form>
+
+              <p className="text-center text-sm text-muted-foreground mt-5">
+                Already have an account?{" "}
+                <Link href="/login?role=landlord" className="font-semibold text-primary hover:underline">Log in</Link>
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

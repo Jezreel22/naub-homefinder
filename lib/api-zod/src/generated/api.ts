@@ -34,6 +34,48 @@ export const RegisterBody = zod.object({
 
 
 /**
+ * @summary Sign in or register with Google
+ */
+export const GoogleAuthBody = zod.object({
+  "credential": zod.string().describe('Google ID token from the Google Sign-In button'),
+  "role": zod.enum(['student', 'landlord', 'agent']).optional().describe('Desired role when creating a new account (defaults to student)')
+})
+
+export const GoogleAuthResponse = zod.object({
+  "message": zod.string(),
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "first_name": zod.string().nullish(),
+  "last_name": zod.string().nullish(),
+  "matriculation_number": zod.string().nullish(),
+  "verification_status": zod.string().nullish(),
+  "account_suspended": zod.boolean().nullish(),
+  "phone_number": zod.string().nullish(),
+  "profile_photo_url": zod.string().nullish(),
+  "created_at": zod.string().nullish()
+}),
+  "token": zod.string()
+})
+
+
+/**
+ * @summary Submit KYC documents for landlord/agent verification
+ */
+export const SubmitKycBody = zod.object({
+  "national_id_type": zod.enum(['nin', 'international_passport', 'drivers_licence']),
+  "national_id_document_url": zod.string().describe('Base64-encoded ID document image'),
+  "selfie_url": zod.string().describe('Base64-encoded selfie image'),
+  "property_document_url": zod.string().optional().describe('Base64-encoded property ownership document (required for landlords)')
+})
+
+export const SubmitKycResponse = zod.object({
+  "message": zod.string().optional()
+})
+
+
+/**
  * @summary Login a user
  */
 export const LoginBody = zod.object({

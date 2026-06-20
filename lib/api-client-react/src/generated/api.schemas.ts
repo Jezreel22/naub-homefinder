@@ -428,6 +428,44 @@ export interface SuspendUserInput {
   reason: string;
 }
 
+/**
+ * Desired role when creating a new account (defaults to student)
+ */
+export type GoogleAuthInputRole = typeof GoogleAuthInputRole[keyof typeof GoogleAuthInputRole];
+
+
+export const GoogleAuthInputRole = {
+  student: 'student',
+  landlord: 'landlord',
+  agent: 'agent',
+} as const;
+
+export interface GoogleAuthInput {
+  /** Google ID token from the Google Sign-In button */
+  credential: string;
+  /** Desired role when creating a new account (defaults to student) */
+  role?: GoogleAuthInputRole;
+}
+
+export type KycSubmitInputNationalIdType = typeof KycSubmitInputNationalIdType[keyof typeof KycSubmitInputNationalIdType];
+
+
+export const KycSubmitInputNationalIdType = {
+  nin: 'nin',
+  international_passport: 'international_passport',
+  drivers_licence: 'drivers_licence',
+} as const;
+
+export interface KycSubmitInput {
+  national_id_type: KycSubmitInputNationalIdType;
+  /** Base64-encoded ID document image */
+  national_id_document_url: string;
+  /** Base64-encoded selfie image */
+  selfie_url: string;
+  /** Base64-encoded property ownership document (required for landlords) */
+  property_document_url?: string;
+}
+
 export interface MessageResponse {
   message?: string;
 }

@@ -34,7 +34,9 @@ import type {
   FileDisputeInput,
   GetPropertiesParams,
   GetRatingsParams,
+  GoogleAuthInput,
   HealthStatus,
+  KycSubmitInput,
   LoginInput,
   MessageItem,
   MessageResponse,
@@ -209,6 +211,148 @@ export const useRegister = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getRegisterMutationOptions(options));
+    }
+
+export const getGoogleAuthUrl = () => {
+
+
+
+
+  return `/api/auth/google`
+}
+
+/**
+ * @summary Sign in or register with Google
+ */
+export const googleAuth = async (googleAuthInput: GoogleAuthInput, options?: RequestInit): Promise<AuthResponse> => {
+
+  return customFetch<AuthResponse>(getGoogleAuthUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      googleAuthInput,)
+  }
+);}
+
+
+
+
+export const getGoogleAuthMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof googleAuth>>, TError,{data: BodyType<GoogleAuthInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof googleAuth>>, TError,{data: BodyType<GoogleAuthInput>}, TContext> => {
+
+const mutationKey = ['googleAuth'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof googleAuth>>, {data: BodyType<GoogleAuthInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  googleAuth(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoogleAuthMutationResult = NonNullable<Awaited<ReturnType<typeof googleAuth>>>
+    export type GoogleAuthMutationBody = BodyType<GoogleAuthInput>
+    export type GoogleAuthMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Sign in or register with Google
+ */
+export const useGoogleAuth = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof googleAuth>>, TError,{data: BodyType<GoogleAuthInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof googleAuth>>,
+        TError,
+        {data: BodyType<GoogleAuthInput>},
+        TContext
+      > => {
+      return useMutation(getGoogleAuthMutationOptions(options));
+    }
+
+export const getSubmitKycUrl = () => {
+
+
+
+
+  return `/api/auth/kyc/submit`
+}
+
+/**
+ * @summary Submit KYC documents for landlord/agent verification
+ */
+export const submitKyc = async (kycSubmitInput: KycSubmitInput, options?: RequestInit): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getSubmitKycUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      kycSubmitInput,)
+  }
+);}
+
+
+
+
+export const getSubmitKycMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitKyc>>, TError,{data: BodyType<KycSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitKyc>>, TError,{data: BodyType<KycSubmitInput>}, TContext> => {
+
+const mutationKey = ['submitKyc'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitKyc>>, {data: BodyType<KycSubmitInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitKyc(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitKycMutationResult = NonNullable<Awaited<ReturnType<typeof submitKyc>>>
+    export type SubmitKycMutationBody = BodyType<KycSubmitInput>
+    export type SubmitKycMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Submit KYC documents for landlord/agent verification
+ */
+export const useSubmitKyc = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitKyc>>, TError,{data: BodyType<KycSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitKyc>>,
+        TError,
+        {data: BodyType<KycSubmitInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitKycMutationOptions(options));
     }
 
 export const getLoginUrl = () => {

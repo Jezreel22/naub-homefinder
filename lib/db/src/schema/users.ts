@@ -5,7 +5,8 @@ import { z } from "zod/v4";
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").unique().notNull(),
-  password_hash: text("password_hash").notNull(),
+  password_hash: text("password_hash"),
+  google_id: text("google_id").unique(),
   role: text("role").notNull(),
 
   first_name: text("first_name"),
@@ -21,6 +22,8 @@ export const usersTable = pgTable("users", {
   national_id_verified_at: timestamp("national_id_verified_at"),
   selfie_url: text("selfie_url"),
   selfie_verified_at: timestamp("selfie_verified_at"),
+  property_document_url: text("property_document_url"),
+  kyc_submitted_at: timestamp("kyc_submitted_at"),
 
   letter_of_agency_url: text("letter_of_agency_url"),
   letter_of_agency_verified_at: timestamp("letter_of_agency_verified_at"),
