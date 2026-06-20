@@ -373,45 +373,26 @@ export default function Home() {
 
       {/* Footer */}
       <footer style={{ background: "#111111" }}>
-        {/* Main footer content */}
-        <div className="max-w-6xl mx-auto px-4 pt-16 pb-10">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-10">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {/* Brand column */}
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div
-                  className="h-9 w-9 rounded-lg flex items-center justify-center font-extrabold text-base text-white"
-                  style={{ background: "#FF5A5F" }}
-                >
-                  N
-                </div>
-                <span className="text-white font-bold text-lg">NAUB Home Finder</span>
+            <div className="col-span-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center font-extrabold text-sm text-white" style={{ background: "#FF5A5F" }}>N</div>
+                <span className="text-white font-bold">NAUB Home Finder</span>
               </div>
-              <p className="text-sm leading-relaxed mb-6" style={{ color: "rgba(255,255,255,0.45)" }}>
-                The trusted housing marketplace for Nigerian Army University Biu students.
-                Find safe, verified accommodation near campus with full escrow protection.
+              <p className="text-xs leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
+                Safe, verified student housing near Nigerian Army University Biu, with full escrow protection.
               </p>
-              <div className="space-y-2 text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 shrink-0" />
-                  <span>support@naub-homefinder.ng</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 shrink-0" />
-                  <span>+234 800 NAUB HOME</span>
-                </div>
+              <div className="flex items-center gap-3 mb-3 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                <div className="flex items-center gap-1"><Mail className="h-3 w-3" /><span>support@naub-homefinder.ng</span></div>
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="flex gap-2">
                 {[Facebook, Twitter, Instagram].map((Icon, i) => (
-                  <a
-                    key={i}
-                    href="#"
-                    className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
-                    style={{ background: "rgba(255,255,255,0.08)" }}
+                  <a key={i} href="#" className="w-7 h-7 rounded-md flex items-center justify-center transition-colors" style={{ background: "rgba(255,255,255,0.08)" }}
                     onMouseEnter={e => (e.currentTarget.style.background = "#FF5A5F")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
-                  >
-                    <Icon className="h-4 w-4 text-white" />
+                    onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}>
+                    <Icon className="h-3.5 w-3.5 text-white" />
                   </a>
                 ))}
               </div>
@@ -420,17 +401,13 @@ export default function Home() {
             {/* Link columns */}
             {Object.entries(FOOTER_LINKS).map(([group, links]) => (
               <div key={group}>
-                <h4 className="text-white font-semibold text-sm mb-4">{group}</h4>
-                <ul className="space-y-3">
+                <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-3">{group}</h4>
+                <ul className="space-y-2">
                   {links.map(link => (
                     <li key={link.label}>
-                      <a
-                        href={link.href}
-                        className="text-sm transition-colors"
-                        style={{ color: "rgba(255,255,255,0.45)" }}
+                      <a href={link.href} className="text-xs transition-colors" style={{ color: "rgba(255,255,255,0.4)" }}
                         onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}
-                      >
+                        onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}>
                         {link.label}
                       </a>
                     </li>
@@ -441,13 +418,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-          <div className="max-w-6xl mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
               &copy; {new Date().getFullYear()} NAUB Home Finder. All rights reserved.
             </p>
-            <div className="flex items-center gap-1 text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <div className="flex items-center gap-1 text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
               <Shield className="h-3 w-3" />
               <span>Secure payments powered by escrow</span>
             </div>
