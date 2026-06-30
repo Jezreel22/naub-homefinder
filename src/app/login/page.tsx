@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { GraduationCap, Building2, ChevronLeft, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
@@ -91,7 +92,7 @@ export default function Login() {
       <div className="hidden lg:flex w-[420px] shrink-0 flex-col justify-between p-10 text-white"
            style={{ background: "linear-gradient(155deg, #FF5A5F 0%, #c0363a 100%)" }}>
         <Link href="/" className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center font-extrabold text-lg">N</div>
+          <Logo size={36} variant="glass" />
           <span className="font-bold text-lg">NAUB Home Finder</span>
         </Link>
         <div className="space-y-6">
@@ -121,8 +122,7 @@ export default function Login() {
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2 mb-8">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-xl flex items-center justify-center font-extrabold text-white text-lg"
-                   style={{ background: "#FF5A5F" }}>N</div>
+              <Logo size={36} variant="solid" />
               <span className="font-bold text-lg">NAUB Home Finder</span>
             </Link>
           </div>

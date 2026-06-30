@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Menu, User, LogOut, LayoutDashboard, Home, PlusCircle, MessageSquare, Shield } from "lucide-react";
+import Logo from "./Logo";
 
 interface StoredUser {
   id: string;
@@ -58,8 +59,7 @@ export default function NavBar() {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <div className="h-9 w-9 rounded-xl flex items-center justify-center font-extrabold text-white text-lg"
-               style={{ background: "#FF5A5F" }}>N</div>
+          <Logo size={36} variant="solid" />
           <span className="font-extrabold text-base tracking-tight hidden sm:block">NAUB Home Finder</span>
         </Link>
 

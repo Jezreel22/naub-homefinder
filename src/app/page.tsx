@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getGetPropertiesQueryOptions } from "@/api";
 import NavBar from "@/components/NavBar";
 import PropertyCard from "@/components/PropertyCard";
+import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -381,7 +382,7 @@ export default function Home() {
             {/* Brand column */}
             <div className="col-span-2">
               <div className="flex items-center gap-2 mb-3">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center font-extrabold text-sm text-white" style={{ background: "#FF5A5F" }}>N</div>
+                <Logo size={32} variant="solid" />
                 <span className="text-white font-bold">NAUB Home Finder</span>
               </div>
               <p className="text-xs leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
