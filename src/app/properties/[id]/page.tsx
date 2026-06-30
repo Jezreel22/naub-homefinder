@@ -35,13 +35,9 @@ function getPhotoUrls(property: any): string[] {
   if (property.photos && property.photos.length > 0) {
     return property.photos.map((p: any) => p.photo_url);
   }
-  const seed = property.id?.replace(/-/g, "").substring(0, 8) ?? "house";
-  return [
-    `https://picsum.photos/seed/${seed}a/1200/700`,
-    `https://picsum.photos/seed/${seed}b/1200/700`,
-    `https://picsum.photos/seed/${seed}c/1200/700`,
-    `https://picsum.photos/seed/${seed}d/1200/700`,
-  ];
+  // No uploaded photos — fall back to a bundled house illustration so the
+  // gallery always looks like a property.
+  return ["/placeholder-house.svg"];
 }
 
 function StatusBadge({ status }: { status?: string | null }) {
