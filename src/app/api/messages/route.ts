@@ -48,6 +48,15 @@ export async function GET(req: NextRequest) {
         .orderBy(desc(messagesTable.created_at))
         .limit(1);
 
+      // Drizzle's db.execute pre-serializes timestamps to ISO strings (unlike
+      // the typed select builder, which returns Date). Accept either shape.
+      const lastAt = r.last_message_at;
+      const lastAtIso = typeof lastAt === "string"
+        ? lastAt
+        : lastAt instanceof Date
+          ? lastAt.toISOString()
+          : null;
+
       return {
         other_user: otherUser ? {
           id: otherUser.id,
@@ -58,7 +67,7 @@ export async function GET(req: NextRequest) {
           average_rating: null,
         } : undefined,
         last_message: conv[0]?.message_text ?? "",
-        last_message_at: r.last_message_at?.toISOString?.() ?? null,
+        last_message_at: lastAtIso,
         unread_count: Number(r.unread_count ?? 0),
       };
     }));

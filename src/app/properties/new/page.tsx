@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Check, Home, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Home, Plus, ImagePlus, Loader2, X } from "lucide-react";
+import { customFetch } from "@/api/custom-fetch";
 
 const step1Schema = z.object({
   address: z.string().min(5, "Full address required (min 5 characters)"),
@@ -53,6 +54,27 @@ export default function ListProperty() {
   const [currentStep, setCurrentStep] = useState(0);
   const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<string[]>([""]);
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+
+  async function uploadPhoto(idx: number, file: File) {
+    setUploadingIdx(idx);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { url } = await customFetch<{ url: string }>("/api/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const next = [...photos];
+      next[idx] = url;
+      setPhotos(next);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      toast({ variant: "destructive", title: "Photo upload failed", description: message });
+    } finally {
+      setUploadingIdx(null);
+    }
+  }
   const [selectedAmenities, setSelectedAmenities] = useState<Record<string, boolean>>({});
 
   const createMutation = useCreateProperty();
@@ -333,38 +355,63 @@ export default function ListProperty() {
               <div>
                 <Label className="text-sm font-semibold mb-3 block">Property Photos</Label>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Add URLs of your property photos. Use image hosting services like Imgur, Google Photos, or Cloudinary.
+                  Upload up to 8 photos. JPG, PNG, WebP, or GIF, max 8 MB each.
                 </p>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {photos.map((url, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input
-                        value={url}
-                        onChange={e => {
-                          const next = [...photos];
-                          next[i] = e.target.value;
-                          setPhotos(next);
-                        }}
-                        placeholder={`Photo ${i + 1} URL (https://...)`}
-                        className="flex-1"
-                      />
-                      {photos.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive shrink-0"
-                          onClick={() => setPhotos(p => p.filter((_, idx) => idx !== i))}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                    <div key={i} className="relative aspect-square border border-dashed border-[#EBEBEB] rounded-xl overflow-hidden bg-[#FAFAFA]">
+                      {url ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={`Photo ${i + 1}`} className="absolute inset-0 w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            aria-label="Remove photo"
+                            className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                            onClick={() => {
+                              const next = [...photos];
+                              next[i] = "";
+                              setPhotos(next);
+                            }}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      ) : (
+                        <label className="absolute inset-0 flex flex-col items-center justify-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-[#F0F0F0] transition-colors">
+                          {uploadingIdx === i ? (
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          ) : (
+                            <ImagePlus className="h-6 w-6" />
+                          )}
+                          <span className="text-xs font-medium">
+                            {uploadingIdx === i ? "Uploading…" : i === 0 ? "Add cover photo" : "Add photo"}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="sr-only"
+                            disabled={uploadingIdx !== null}
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (file) uploadPhoto(i, file);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
                       )}
                     </div>
                   ))}
                   {photos.length < 8 && (
-                    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setPhotos(p => [...p, ""])}>
-                      <Plus className="h-4 w-4" /> Add another photo
-                    </Button>
+                    <button
+                      type="button"
+                      className="aspect-square border border-dashed border-[#EBEBEB] rounded-xl flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground hover:bg-[#F0F0F0] transition-colors disabled:opacity-50"
+                      disabled={uploadingIdx !== null}
+                      onClick={() => setPhotos(p => [...p, ""])}
+                    >
+                      <Plus className="h-6 w-6" />
+                      <span className="text-xs font-medium">Add slot</span>
+                    </button>
                   )}
                 </div>
               </div>
