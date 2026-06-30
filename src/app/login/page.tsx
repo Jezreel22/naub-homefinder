@@ -47,9 +47,10 @@ export default function Login() {
 
   function onSuccess(token: string, user: any) {
     saveAuth(token, user);
-    const dest = user.role === "student" ? "/dashboard"
-      : !user.national_id_verified_at ? "/kyc"
-      : "/dashboard";
+    // KYC is a one-time flow triggered after registration; do not re-route to /kyc
+    // on subsequent logins based on national_id_verified_at. If a landlord
+    // skipped it at signup, they can resume from the dashboard.
+    const dest = "/dashboard";
     toast({ title: "Welcome back!", description: `Logged in as ${user.first_name ?? user.email}.` });
     router.push(dest);
   }

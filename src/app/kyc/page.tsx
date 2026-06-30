@@ -58,7 +58,7 @@ export default function KYC() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [user, setUser] = useState<{ id: string; email: string; role: string; first_name?: string | null; last_name?: string | null } | null>(null);
+  const [user, setUser] = useState<{ id: string; email: string; role: string; first_name?: string | null; last_name?: string | null; verification_status?: string; kyc_submitted_at?: string | null } | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
@@ -67,6 +67,11 @@ export default function KYC() {
     setToken(localStorage.getItem("naub_token"));
     setHydrated(true);
   }, []);
+
+  // If the user has already submitted KYC, show the "under review" screen
+  // instead of forcing them through the 5-step flow again. They can also
+  // resume to add a missing property document from this screen.
+  const alreadySubmitted = !!user?.kyc_submitted_at;
 
   const [step, setStep] = useState(0);
   const [idDocType, setIdDocType] = useState<IdDocType | null>(null);
@@ -173,7 +178,18 @@ export default function KYC() {
   }
 
   async function handleSubmit() {
-    if (!user || !token || !idDocBase64 || !selfieBase64 || !idDocType) return;
+    if (!user || !token || !idDocBase64 || !selfieBase64 || !idDocType) {
+      // Surface the missing-field case explicitly instead of silently returning;
+      // the user reported "Submission failed" with no clue, and silent returns
+      // were a likely culprit for that symptom on partial flows.
+      const missing: string[] = [];
+      if (!idDocType) missing.push("ID document type");
+      if (!idDocBase64) missing.push("ID document upload");
+      if (!selfieBase64) missing.push("selfie");
+      toast({ variant: "destructive", title: "Missing required information",
+              description: `Please complete: ${missing.join(", ") || "log in"}.` });
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/auth/kyc/submit`, {
@@ -187,8 +203,21 @@ export default function KYC() {
         }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || "Submission failed");
+        // Try to extract a useful error message. Show response status + body
+        // (truncated) so failures are diagnosable instead of opaque.
+        const rawText = await res.text().catch(() => "");
+        let serverMsg = "";
+        try {
+          const body = JSON.parse(rawText);
+          serverMsg = body?.error || body?.message || "";
+        } catch {
+          // body wasn't JSON — fall through with raw text
+          serverMsg = rawText.slice(0, 200);
+        }
+        throw new Error(
+          (serverMsg ? serverMsg + " " : "") +
+          `(HTTP ${res.status}${res.statusText ? " " + res.statusText : ""})`
+        );
       }
       const updated = { ...user, verification_status: "under_review", kyc_submitted_at: new Date().toISOString() };
       localStorage.setItem("naub_user", JSON.stringify(updated));
@@ -248,6 +277,50 @@ export default function KYC() {
                   onClick={() => router.push("/dashboard")}>
             Go to Dashboard
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // If they've already submitted KYC at least once, don't force them through
+  // the 5-stage flow again. Show their current status and let them add a
+  // missing property document if they originally skipped it.
+  if (alreadySubmitted && status === "idle") {
+    const submitted = user.kyc_submitted_at ? new Date(user.kyc_submitted_at) : null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F7] p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full text-center space-y-6">
+          <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+            <ShieldCheck className="h-10 w-10 text-green-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold mb-2">KYC Already Submitted</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Your documents were submitted
+              {submitted && (
+                <> on <span className="font-medium text-foreground">{submitted.toLocaleDateString()}</span></>
+              )}
+              . Verification typically completes within a few minutes; you'll see your status update on the dashboard.
+            </p>
+            <p className="text-muted-foreground text-sm leading-relaxed mt-3">
+              Status: <span className="font-medium text-foreground capitalize">{(user.verification_status ?? "pending").replace("_", " ")}</span>
+            </p>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5 text-sm text-amber-800 text-left">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+            <span>If we asked you to add or replace a document, you'll receive a notification. You don't need to redo the 5 stages.</span>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button className="w-full h-11 rounded-xl font-semibold"
+                    style={{ background: "#FF5A5F", color: "#fff", border: "none" }}
+                    onClick={() => router.push("/dashboard")}>
+              Go to Dashboard
+            </Button>
+            <button onClick={() => { localStorage.removeItem("naub_user.kyc_submitted_at"); setStatus("idle"); }}
+              className="text-xs text-muted-foreground hover:text-foreground underline">
+              I need to resubmit (clears local flag only)
+            </button>
+          </div>
         </div>
       </div>
     );
