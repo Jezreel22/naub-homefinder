@@ -14,9 +14,10 @@ const EXT_BY_MIME: Record<string, string> = {
 };
 const MAX_BYTES = 8 * 1024 * 1024;
 
-// Files land in the project's public/ tree so Next.js serves them as static
-// assets at /uploads/<name>. Requires a writable filesystem — fine for local
-// dev and self-hosted; not viable on read-only serverless platforms.
+// Files land in `public/uploads/` and are served by the matching GET route
+// at /api/uploads/<name>. (Next.js production serves /public from a
+// build-time snapshot, so a runtime-written file at /uploads/<name> isn't
+// reachable without a backing route — the API route below fills that gap.)
 export async function POST(req: NextRequest) {
   try {
     await requireAuth(req);
@@ -42,8 +43,8 @@ export async function POST(req: NextRequest) {
     await fs.mkdir(path.dirname(dest), { recursive: true });
     await fs.writeFile(dest, Buffer.from(await file.arrayBuffer()));
 
-    return jsonResponse({ url: `/uploads/${name}` }, { status: 201 });
+    return jsonResponse({ url: `/api/uploads/${name}` }, { status: 201 });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }
