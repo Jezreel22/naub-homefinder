@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "pnpm --filter @workspace/naub-home-finder run build",
+  "installCommand": "pnpm install",
+  "outputDirectory": "artifacts/naub-home-finder/.next",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/artifacts/naub-home-finder/$1" }
+  ]
+}

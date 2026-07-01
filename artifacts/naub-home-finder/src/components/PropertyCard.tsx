@@ -1,7 +1,9 @@
-import { Link } from "wouter";
+"use client";
+
+import Link from "next/link";
 import { Bed, MapPin, ShieldCheck } from "lucide-react";
 import TrustBadge from "./TrustBadge";
-import type { PropertySummary } from "@workspace/api-client-react";
+import type { PropertySummary } from "@/api";
 
 interface PropertyCardProps {
   property: PropertySummary;
@@ -14,8 +16,10 @@ function formatNGN(amount?: number | null) {
 
 function getPhotoUrl(property: PropertySummary) {
   if (property.hero_photo_url) return property.hero_photo_url;
-  const seed = property.id ? property.id.replace(/-/g, "").substring(0, 8) : "apartment";
-  return `https://picsum.photos/seed/${seed}/600/400`;
+  // Fallback to a bundled house illustration so every listing without an
+  // uploaded photo still looks like a property. Previously used picsum.photos,
+  // which returned random photos — sometimes houses, sometimes landscapes.
+  return "/placeholder-house.svg";
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {
@@ -33,7 +37,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/default/600/400`;
+              (e.target as HTMLImageElement).src = "/placeholder-house.svg";
             }}
           />
           <div className="absolute top-3 left-3">
