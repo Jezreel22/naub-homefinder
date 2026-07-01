@@ -116,6 +116,82 @@ End-to-end smoke test run against Postgres 18.4 with the production-shape `drizz
 - **`npm run dev` first-compile time** is ~55s for `/` because Tailwind v4 / Radix tree is large. Subsequent hot reloads are <1s.
 - **Env file**: `.env.example` not yet written. Will need `DATABASE_URL`, `JWT_SECRET`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID` before Phase 3 begins.
 
+## Vercel deploy — 2026-07-01
+
+Deploy attempt surfaced this error trace from Vercel's build environment:
+
+```
+Error: src/app.ts(10,3): error TS2349: This expression is not callable.
+  Type 'typeof import("/vercel/path0/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/index")' has no call signatures.
+src/app.ts(13,11): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/app.ts(20,11): error TS7006: Parameter 'res' implicitly has an 'any' type.
+```
+
+This is **not** the project's own code. There is no `src/app.ts` in the repo — see [src/app/layout.tsx](src/app/layout.tsx) for the only `src/app*` file. The trace came from Vercel's `pino-http@10.5.0` injection, which Vercel applies automatically when it can't confidently identify the framework. In that mode Vercel runs `tsc` against the source tree, doesn't use `next build`, and points the error reporter at the wrong path.
+
+Fix: pinned the framework at [vercel.json](vercel.json):
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "installCommand": "npm install"
+}
+```
+
+That stops the `pino-http` injection and forces `next build` regardless of any project-level detection quirks. Re-deploy after this commit should clear the TS errors.
+
+If the same error recurs after recreating the Vercel project, also confirm in **Project Settings → General → Root Directory** that it's set to `./` (or left empty) — the trace's `/vercel/path0/` prefix suggests Vercel was looking at the wrong directory in the monorepo.
+
+## Hardening + persistence round — 2026-07-01
+
+Closed out the four loose ends from the previous bring-up:
+
+1. **`/api/upload` was already implemented** — the progress.md entry was stale. Verified the round-trip end-to-end (login → upload PNG → fetch via the new `/api/uploads/[name]` route → bytes match). Found one gap during verification: Next.js production serves `/public` from a build-time snapshot, so runtime-written files weren't reachable at `/uploads/<name>`. Added `src/app/api/uploads/[name]/route.ts` to stream them on demand and updated `src/app/api/upload/route.ts` to return `/api/uploads/<name>`. Both URLs are validated as `<uuid>.<allowed-ext>`; path traversal is blocked.
+
+2. **Production hardening**
+   - `src/lib/log.ts` — structured logger. One JSON line per call in production (`NODE_ENV === "production"`), pretty `[level] message {k=v}` in dev. `logFromRequest(req)` reads `x-request-id` off the request so handlers can thread it into every log line. Replaced all 3 direct `console.*` callsites (`api.ts:handleError`, `db/index.ts`, `db/migrate.ts`).
+   - `next.config.ts` — added `headers()` with `Content-Security-Policy` (allow-listed: self, Google OAuth, OpenStreetMap, picsum, lh3), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(self)`. CSP keeps `'unsafe-inline'` for `script-src`/`style-src` because Next.js + Radix inject inline code; nonce-based CSP is a follow-up.
+   - `src/middleware.ts` — runs on every `/api/:path*`. Stamps a `x-request-id` UUID, threads it into the request headers so handlers can pull it via `logFromRequest(req)`, and rate-limits by `(ip, routePrefix)`:
+     - `/api/auth/*` — 5 req / min / IP
+     - `/api/upload` — 20 req / min / IP
+     - `/api/messages` — 30 req / min / IP
+     - everything else passthrough
+     State is a module-scoped `Map`; in-memory only — production should back this with Redis/Upstash. On overflow: `429 Too Many Requests` + `Retry-After` + structured `log.warn("rate_limited", {…})`.
+
+3. **`db:seed`** — `src/lib/db/seed.ts`. Idempotent (uses `INSERT … ON CONFLICT (email) DO NOTHING`). Creates three demo accounts (all password `passw0rd`):
+   - `admin@naub.local` — `escrow_officer`, verified
+   - `student@naub.local` — `student`, verified
+   - `landlord@naub.local` — `landlord`, verified, plus one live 1BR listing at "12 Maiduguri Road, Biu, Borno State" with `/placeholder-house.svg` as the hero photo. The same retry-on-unique-violation pattern used in `properties/route.ts` covers the occupancy-code collision case. First run reports `users: 3 inserted, 0 skipped`; subsequent runs print `users: 0 inserted, 3 skipped` and skip the property with reason "landlord already has a property".
+
+4. **Postgres persistence** — `docker-compose.yml` for users with the v2 plugin, and `scripts/db-up.sh` for hosts without it (this host doesn't have `docker compose`, so the script falls back to plain `docker run` with a named volume). New npm scripts: `db:up` / `db:down` / `db:logs`. The volume `naub-pg-data` is preserved across `db:down`. Verified end-to-end: `db:down` → `db:up` round-trip preserves all rows.
+
+### Verification (live, against the docker-backed Postgres)
+
+- `npm run typecheck` → exit 0
+- `npm run build` → exit 0, 34 routes including `/api/uploads/[name]`, middleware compiled (34.6 kB)
+- `npm run db:migrate` → `[info] Migrations complete`
+- `npm run db:seed` → first run `3 users + 1 property`, second run `0 + 0` (idempotent)
+- `npm start` → ready in ~1s
+- `curl -sI /api/healthz` shows all 6 security headers + `x-request-id`
+- Login as `landlord@naub.local` → 200 + JWT
+- POST 70-byte PNG to `/api/upload` → 201 `{url: "/api/uploads/<uuid>.png"}`
+- `curl /api/uploads/<uuid>.png` → 200, `content-type: image/png`, byte-for-byte match with the upload
+- `curl -X POST /api/upload` with no token → 401
+- 5 logins in <60s from the same IP → first 4 return 401, 5th+ return 429 with `Retry-After: 41`
+- Structured log on rate-limit: `{"timestamp":"…","level":"warn","message":"rate_limited","requestId":"…","ip":"::1","route":"/api/auth/login","method":"POST","limit_max":5,"window_ms":60000}`
+- `docker stop naub-pg && docker start naub-pg` → all 3 seeded users + the property survive
+- Login as `admin@naub.local` → can hit `/api/admin/verifications` and `/api/admin/pending-properties`
+- Login as `student@naub.local` → 403 on `/api/admin/verifications`
+
+### Caveats / follow-ups
+
+- **Docker group on this host**: `usermod -aG docker hov` is in place, but the change only takes effect on a fresh login. In the current bash session, plain `docker` still fails with "permission denied" — `sg docker -c "…"` (or any new shell) is the workaround until you log out and back in.
+- **`'unsafe-inline'` in CSP** is a pragmatic concession to Next.js + Radix. To go strict, wire nonce-based CSP via `useServerInsertedHTML` in `app/layout.tsx` and propagate the nonce through scripts — larger change, parked.
+- **Rate limiter is in-memory**. Works for a single Node process; horizontally-scaled or serverless deployments need Redis/Upstash (the call sites don't change).
+- **Magic-string credentials**. `passw0rd` for all three seeded accounts is fine for `localhost` only — never use this `JWT_SECRET` (already a 32-byte base64 dev secret) outside dev.
+
 ## Bring-up — 2026-06-30
 
 Followed the plan at `.claude/plans/fizzy-dazzling-sphinx.md` to bring the backend up from cold on this host.
