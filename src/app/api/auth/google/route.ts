@@ -84,6 +84,6 @@ export async function POST(req: NextRequest) {
     };
     return jsonResponse(response);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

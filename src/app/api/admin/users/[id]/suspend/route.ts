@@ -35,6 +35,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return jsonResponse({ message: "User suspended" });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

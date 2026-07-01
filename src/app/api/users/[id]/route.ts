@@ -40,7 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     };
     return jsonResponse(response);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }
 
@@ -60,6 +60,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const [updated] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
     return jsonResponse({ message: "Updated", user: updated });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

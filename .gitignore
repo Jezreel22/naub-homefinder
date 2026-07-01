@@ -1,4 +1,7 @@
 node_modules
 .next
 .cla
+.env
+.env.local
+.tsbuildinfo
 public/uploads/*

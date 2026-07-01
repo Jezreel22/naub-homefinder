@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
     const response: PropertyListResponse = { data, total, page, page_size: pageSize };
     return jsonResponse(response);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }
 
@@ -177,6 +177,6 @@ export async function POST(req: NextRequest) {
     }
     throw lastErr ?? new Error("Could not allocate occupancy code");
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

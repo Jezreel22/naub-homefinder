@@ -49,6 +49,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const [updated] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id)).limit(1);
     return jsonResponse(updated);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

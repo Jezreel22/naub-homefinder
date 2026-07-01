@@ -30,6 +30,6 @@ export async function GET(req: NextRequest) {
 
     return jsonResponse(data);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

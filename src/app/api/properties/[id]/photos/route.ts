@@ -33,6 +33,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return jsonResponse({ message: "Photos added", count: inserted.length, photos: inserted }, { status: 201 });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

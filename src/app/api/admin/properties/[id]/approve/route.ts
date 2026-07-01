@@ -28,6 +28,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return jsonResponse({ message: "Property published live" });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

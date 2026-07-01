@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
 
     return jsonResponse(conversations);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }
 
@@ -93,6 +93,6 @@ export async function POST(req: NextRequest) {
 
     return jsonResponse(msg, { status: 201 });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

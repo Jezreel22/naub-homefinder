@@ -41,6 +41,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
     void sql; // silence unused
     return jsonResponse(data);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

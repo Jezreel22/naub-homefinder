@@ -43,6 +43,6 @@ export async function POST(req: NextRequest) {
 
     return jsonResponse({ message: "KYC documents submitted for review", status: "under_review" });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

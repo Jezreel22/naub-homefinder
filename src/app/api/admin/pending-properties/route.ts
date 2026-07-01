@@ -57,6 +57,6 @@ export async function GET(req: NextRequest) {
     const response: PropertyListResponse = { data, total: data.length, page: 1, page_size: data.length };
     return jsonResponse(response);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

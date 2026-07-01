@@ -30,6 +30,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     };
     return jsonResponse(response);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

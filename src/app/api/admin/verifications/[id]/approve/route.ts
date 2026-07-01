@@ -29,6 +29,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return jsonResponse({ message: "User verified" });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

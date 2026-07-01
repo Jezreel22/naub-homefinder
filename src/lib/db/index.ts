@@ -1,11 +1,12 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import { log } from "@/lib/log";
 
 if (!process.env.DATABASE_URL) {
   // Don't throw at import-time in serverless contexts where the env may not
   // be set at module load — fail at first query instead. But do log loudly.
-  console.warn("[db] DATABASE_URL is not set; queries will fail until it is.");
+  log.warn("DATABASE_URL is not set; queries will fail until it is.");
 }
 
 const connectionString = process.env.DATABASE_URL ?? "postgres://localhost:5432/_unset";

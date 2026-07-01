@@ -47,6 +47,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return jsonResponse({ message: "Dispute filed. Escrow Officer will review within 5 business days." }, { status: 201 });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

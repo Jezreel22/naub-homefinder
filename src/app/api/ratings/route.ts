@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     return jsonResponse(data);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }
 
@@ -66,6 +66,6 @@ export async function POST(req: NextRequest) {
 
     return jsonResponse(rating, { status: 201 });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }

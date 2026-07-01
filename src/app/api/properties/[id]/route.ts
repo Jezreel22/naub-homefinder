@@ -98,7 +98,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     };
     return jsonResponse(response);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }
 
@@ -134,7 +134,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const [updated] = await db.select().from(propertiesTable).where(eq(propertiesTable.id, id)).limit(1);
     return jsonResponse(updated);
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }
 
@@ -152,6 +152,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await db.delete(propertiesTable).where(eq(propertiesTable.id, id));
     return jsonResponse({ message: "Listing removed" });
   } catch (err) {
-    return handleError(err);
+    return handleError(err, req);
   }
 }
