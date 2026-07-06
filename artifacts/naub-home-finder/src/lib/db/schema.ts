@@ -1,5 +1,16 @@
-import { pgTable, text, integer, boolean, timestamp, uuid, jsonb, real, date, check } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, uuid, jsonb, real, date, check, customType } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+
+// Drizzle 0.45 has no first-class `bytea` column, so we declare one. The
+// column stores raw image bytes; postgres-js encodes/decodes Buffers for
+// bytea automatically. Used by /api/upload to persist uploads in the DB —
+// the serverless filesystem on Vercel is read-only, so we can't write to
+// `public/uploads/` at runtime the way a long-lived server would.
+export const bytea = customType<{ data: Buffer; default: false }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 // ─── users ─────────────────────────────────────────────────────────────────
 export const usersTable = pgTable("users", {
@@ -77,6 +88,19 @@ export const propertyPhotosTable = pgTable("property_photos", {
   flagged_reason: text("flagged_reason"),
 
   uploaded_at: timestamp("uploaded_at").defaultNow(),
+});
+
+// ─── uploads ───────────────────────────────────────────────────────────────
+// Binary blobs for files posted to /api/upload (currently property photos).
+// Bytes live in `data` as bytea; the matching GET route at /api/uploads/<id>
+// streams them back with the stored MIME type.
+export const uploadsTable = pgTable("uploads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  mime: text("mime").notNull(),
+  size_bytes: integer("size_bytes").notNull(),
+  data: bytea("data").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // ─── bookings ──────────────────────────────────────────────────────────────
@@ -217,6 +241,8 @@ export type Property = typeof propertiesTable.$inferSelect;
 export type NewProperty = typeof propertiesTable.$inferInsert;
 export type PropertyPhoto = typeof propertyPhotosTable.$inferSelect;
 export type NewPropertyPhoto = typeof propertyPhotosTable.$inferInsert;
+export type Upload = typeof uploadsTable.$inferSelect;
+export type NewUpload = typeof uploadsTable.$inferInsert;
 export type Booking = typeof bookingsTable.$inferSelect;
 export type NewBooking = typeof bookingsTable.$inferInsert;
 export type Dispute = typeof disputesTable.$inferSelect;
@@ -234,6 +260,7 @@ export const schema = {
   usersTable,
   propertiesTable,
   propertyPhotosTable,
+  uploadsTable,
   bookingsTable,
   disputesTable,
   messagesTable,

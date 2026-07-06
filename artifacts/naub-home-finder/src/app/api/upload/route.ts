@@ -1,26 +1,20 @@
 import { NextRequest } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
 import { requireAuth } from "@/lib/auth";
 import { handleError, jsonResponse, errorResponse } from "@/lib/api";
+import { db } from "@/lib/db";
+import { uploadsTable } from "@/lib/db/schema";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const EXT_BY_MIME: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-};
 const MAX_BYTES = 8 * 1024 * 1024;
 
-// Files land in `public/uploads/` and are served by the matching GET route
-// at /api/uploads/<name>. (Next.js production serves /public from a
-// build-time snapshot, so a runtime-written file at /uploads/<name> isn't
-// reachable without a backing route — the API route below fills that gap.)
+// Stores the uploaded image as a bytea blob in Postgres and returns
+// `/api/uploads/<id>`, which the GET route serves from the DB. This replaces
+// the disk-based write (`public/uploads/`) — Vercel's serverless filesystem
+// is read-only at runtime, so persisting to the DB is what makes uploads
+// actually work in production.
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(req);
+    const user = await requireAuth(req);
 
     const form = await req.formData();
     const file = form.get("file");
@@ -37,13 +31,18 @@ export async function POST(req: NextRequest) {
       return errorResponse(`File too large. Max ${MAX_BYTES / 1024 / 1024} MB.`, 413);
     }
 
-    const ext = EXT_BY_MIME[file.type] ?? "bin";
-    const name = `${crypto.randomUUID()}.${ext}`;
-    const dest = path.join(process.cwd(), "public", "uploads", name);
-    await fs.mkdir(path.dirname(dest), { recursive: true });
-    await fs.writeFile(dest, Buffer.from(await file.arrayBuffer()));
+    const data = Buffer.from(await file.arrayBuffer());
+    const [row] = await db
+      .insert(uploadsTable)
+      .values({
+        user_id: user.id,
+        mime: file.type,
+        size_bytes: file.size,
+        data,
+      })
+      .returning({ id: uploadsTable.id });
 
-    return jsonResponse({ url: `/api/uploads/${name}` }, { status: 201 });
+    return jsonResponse({ url: `/api/uploads/${row.id}` }, { status: 201 });
   } catch (err) {
     return handleError(err, req);
   }
